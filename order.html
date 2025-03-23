@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Order Summary - Nanking Restaurant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    function generateOrderNumber() {
+      return "NR" + Math.floor(100000 + Math.random() * 900000);
+    }
+
+    function loadCart() {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let cartTable = document.getElementById("cartTable");
+      let subtotal = 0;
+      let gst = 30;
+
+      cartTable.innerHTML = "";
+
+      if (cart.length === 0) {
+          cartTable.innerHTML = "<tr><td colspan='6' class='text-center'>Your cart is empty.</td></tr>";
+      } else {
+          cart.forEach((item, index) => {
+              let row = `<tr>
+                          <td>${item.name}</td>
+                          <td>
+                            <button class="btn btn-sm btn-secondary" onclick="changeQuantity(${index}, -1)">-</button>
+                            ${item.quantity}
+                            <button class="btn btn-sm btn-secondary" onclick="changeQuantity(${index}, 1)">+</button>
+                          </td>
+                          <td>₹${item.price}</td>
+                          <td>₹${(item.price * item.quantity).toFixed(2)}</td>
+                          <td><button class="btn btn-danger btn-sm" onclick="removeFromCart(${index})">Remove</button></td>
+                       </tr>`;
+              cartTable.innerHTML += row;
+              subtotal += item.price * item.quantity;
+          });
+      }
+
+      let total = subtotal + gst;
+      document.getElementById("subtotalAmount").innerText = "₹" + subtotal.toFixed(2);
+      document.getElementById("totalAmount").innerText = "₹" + total.toFixed(2);
+      document.getElementById("orderNumber").innerText = generateOrderNumber();
+    }
+
+    function changeQuantity(index, change) {
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      if (cart[index]) {
+        cart[index].quantity += change;
+        if (cart[index].quantity < 1) cart[index].quantity = 1;
+        localStorage.setItem("cart", JSON.stringify(cart));
+        loadCart();
+      }
+    }
+
+    function removeFromCart(index) {
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      cart.splice(index, 1);
+      localStorage.setItem("cart", JSON.stringify(cart));
+      loadCart();
+    }
+
+    function submitOrder(event) {
+      event.preventDefault();
+      
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      if (cart.length === 0) {
+        alert("Your cart is empty. Please add items to your cart first.");
+        return;
+      }
+
+      const customerName = document.getElementById("customerName").value.trim();
+      const contactNumber = document.getElementById("contactNumber").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const tableNumber = document.getElementById("tableNumber").value.trim();
+      const orderNumber = document.getElementById("orderNumber").innerText;
+      const totalAmount = parseFloat(document.getElementById("totalAmount").innerText.replace("₹", ""));
+
+      if (!customerName || !contactNumber || !tableNumber) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
+      let orders = JSON.parse(localStorage.getItem("orders")) || [];
+
+      let newOrder = {
+        orderId: orderNumber,
+        customerName: customerName,
+        contactNumber: contactNumber,
+        email: email,
+        tableNumber: parseInt(tableNumber),
+        items: cart,
+        totalPrice: totalAmount.toFixed(2),
+        status: "Pending"
+      };
+
+      orders.push(newOrder);
+      localStorage.setItem("orders", JSON.stringify(orders));
+
+      localStorage.removeItem("cart");
+
+      alert("Order submitted successfully! Your order number is: " + orderNumber);
+      window.location.href = "index.html";
+    }
+
+    window.onload = loadCart;
+  </script>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Nanking Restaurant
+        <span class="tagline">We Serve Royalty</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div id="navbarNav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html#about">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="menu.html">Menu</a></li>
+          <li class="nav-item"><a class="nav-link" href="portfolio.html">Gallery</a></li>
+          <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+          <li class="nav-item">
+            <a class="nav-link btn btn-warning text-dark px-3" href="order.html">
+              🛒 Cart <span id="cartCount">(0)</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Order Summary Section -->
+  <section class="py-5" id="orderSummary">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2>Your Order Summary</h2>
+      </div>
+      <h4>Order Number: <span id="orderNumber"></span></h4>
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="table-dark">
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Subtotal</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="cartTable"></tbody>
+        </table>
+      </div>
+      <h4 class="text-end">Subtotal: <span id="subtotalAmount">₹0.00</span></h4>
+      <h4 class="text-end">GST: <span>₹30.00</span></h4>
+      <h4 class="text-end fw-bold">Total: <span id="totalAmount">₹0.00</span></h4>
+      
+      <!-- Order Form -->
+      <div class="mt-5">
+        <h3>Complete Your Order</h3>
+        <form id="orderForm" onsubmit="submitOrder(event)">
+          <div class="mb-3">
+            <label for="customerName" class="form-label">Name</label>
+            <input type="text" id="customerName" name="customerName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="contactNumber" class="form-label">Contact Number</label>
+            <input type="text" id="contactNumber" name="contactNumber" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label for="tableNumber" class="form-label">Table Number</label>
+            <input type="number" id="tableNumber" name="tableNumber" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Submit Order</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
